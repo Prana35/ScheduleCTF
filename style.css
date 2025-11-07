@@ -26,23 +26,17 @@ header {
     max-width: 600px;
     margin-bottom: 30px;
 }
-
 .form-container h3 {
     margin-top: 0;
     text-align: center;
     color: #283593;
 }
-
-.form-group {
-    margin-bottom: 15px;
-}
-
+.form-group { margin-bottom: 15px; }
 .form-group label {
     display: block;
     margin-bottom: 5px;
     font-weight: 500;
 }
-
 .form-group input[type="text"],
 .form-group input[type="datetime-local"] {
     width: 100%;
@@ -52,11 +46,10 @@ header {
     box-sizing: border-box; 
     font-size: 1rem;
 }
-
 .form-container button {
     width: 100%;
     padding: 12px;
-    background-color: #283593; /* Biru */
+    background-color: #283593;
     color: white;
     border: none;
     border-radius: 5px;
@@ -65,11 +58,7 @@ header {
     cursor: pointer;
     transition: background-color 0.2s;
 }
-
-.form-container button:hover {
-    background-color: #1a237e; /* Biru tua */
-}
-
+.form-container button:hover { background-color: #1a237e; }
 
 /* --- KONTEN JADWAL --- */
 #countdown-container {
@@ -79,7 +68,6 @@ header {
     width: 100%;
     max-width: 600px;
 }
-
 .schedule-item {
     background-color: #ffffff;
     border-radius: 10px;
@@ -96,8 +84,38 @@ header {
     color: #283593;
     border-bottom: 2px solid #e8eaf6;
     padding-bottom: 10px;
-    /* Memberi ruang untuk tombol */
     padding-right: 60px; 
+}
+
+/* --- Tampilan Tanggal Mulai & Berakhir (BARU) --- */
+.target-date-start, .target-date-end {
+    font-size: 1rem;
+    font-weight: 500;
+    color: #37474f; 
+    text-align: left; /* Ubah ke kiri */
+    margin: 5px 0;
+    background-color: #fafafa;
+    padding: 10px;
+    border-radius: 5px;
+}
+.target-date-start {
+    margin-top: -10px;
+    border-left: 4px solid #42a5f5; /* Biru (Mulai) */
+}
+.target-date-end {
+    margin-bottom: 25px;
+    border-left: 4px solid #ef5350; /* Merah (Berakhir) */
+}
+/* --- Akhir Tampilan Tanggal --- */
+
+
+/* Label Status Timer (BARU) */
+.timer-label {
+    font-weight: bold;
+    color: #1a237e;
+    text-align: center;
+    margin-bottom: 10px;
+    font-size: 1.1rem;
 }
 
 .timer {
@@ -105,27 +123,23 @@ header {
     justify-content: space-around;
     text-align: center;
 }
-
 .time-box {
     background-color: #e8eaf6;
     border-radius: 8px;
     padding: 15px;
     min-width: 70px;
 }
-
 .time-box span {
     display: block;
     font-size: 2.2rem;
     font-weight: bold;
     color: #1a237e;
 }
-
 .time-box .label {
     font-size: 0.9rem;
     color: #546e7a;
     margin-top: 5px;
 }
-
 .event-ended {
     font-size: 1.5rem;
     font-weight: bold;
@@ -149,29 +163,30 @@ header {
     text-align: center;
     transition: background-color 0.2s;
 }
-
 .delete-btn {
     right: 15px;
-    background-color: #ef5350; /* Merah */
+    background-color: #ef5350;
     color: white;
 }
 .delete-btn:hover { background-color: #d32f2f; }
-
 .edit-btn {
-    right: 55px; /* Di sebelah tombol hapus */
-    background-color: #ffca28; /* Kuning */
+    right: 55px;
+    background-color: #ffca28;
     color: #333;
 }
 .edit-btn:hover { background-color: #ffb300; }
 
-
-/* --- TAMPILAN EDIT (BARU) --- */
+/* TAMPILAN EDIT */
 .edit-view {
-    display: none; /* Sembunyi secara default */
+    display: none; 
     flex-direction: column;
-    gap: 15px;
+    gap: 10px; /* Kurangi gap */
 }
-
+.edit-view label {
+    font-weight: 500;
+    margin-bottom: -5px; 
+    margin-top: 5px; /* Beri jarak antar input */
+}
 .edit-view input {
     width: 100%;
     padding: 10px;
@@ -180,35 +195,25 @@ header {
     box-sizing: border-box;
     font-size: 1rem;
 }
-
 .edit-view button {
     padding: 10px;
     border: none;
     border-radius: 5px;
     cursor: pointer;
     font-weight: bold;
+    margin-top: 10px; /* Beri jarak di atas tombol */
 }
-
 .edit-view .save-btn {
-    background-color: #4caf50; /* Hijau */
+    background-color: #4caf50;
     color: white;
 }
 .edit-view .save-btn:hover { background-color: #388e3c; }
-
 .edit-view .cancel-btn {
-    background-color: #f1f1f1; /* Abu-abu */
+    background-color: #f1f1f1;
     color: #333;
 }
 .edit-view .cancel-btn:hover { background-color: #e0e0e0; }
 
-
-/* --- LOGIKA UNTUK MENUKAR TAMPILAN --- */
-/* Saat .is-editing, sembunyikan .display-view */
-.schedule-item.is-editing .display-view {
-    display: none;
-}
-
-/* Saat .is-editing, tampilkan .edit-view */
-.schedule-item.is-editing .edit-view {
-    display: flex;
-}
+/* LOGIKA MENUKAR TAMPILAN */
+.schedule-item.is-editing .display-view { display: none; }
+.schedule-item.is-editing .edit-view { display: flex; }

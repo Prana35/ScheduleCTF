@@ -2,25 +2,22 @@
 
 const scheduleForm = document.getElementById('add-schedule-form');
 const eventNameInput = document.getElementById('event-name');
-const eventDateInput = document.getElementById('event-date');
+const eventDateStartInput = document.getElementById('event-date-start'); // Diperbarui
+const eventDateEndInput = document.getElementById('event-date-end'); // BARU
 const countdownContainer = document.getElementById('countdown-container');
 
-// Memuat jadwal dari localStorage (yang disimpan sebagai JSON string)
 let schedules = loadSchedules();
 
 // --- Fungsi Penyimpanan (Load/Save) ---
 
 function loadSchedules() {
     const schedulesJSON = localStorage.getItem('mySchedules');
-    // Parse JSON string kembali menjadi array/object
     return schedulesJSON ? JSON.parse(schedulesJSON) : [];
 }
 
 function saveSchedules(schedulesToSave) {
-    // Ubah array/object menjadi JSON string untuk disimpan
     localStorage.setItem('mySchedules', JSON.stringify(schedulesToSave));
 }
-
 
 // --- Fungsi CRUD (Create, Read, Update, Delete) ---
 
@@ -28,39 +25,45 @@ function saveSchedules(schedulesToSave) {
  * (CREATE) Menambahkan jadwal baru
  */
 function addSchedule(e) {
-    e.preventDefault(); 
+    e.preventDefault();
     const name = eventNameInput.value;
-    const date = eventDateInput.value;
+    const dateStart = eventDateStartInput.value; // Diperbarui
+    const dateEnd = eventDateEndInput.value;   // BARU
 
-    if (!name || !date) {
-        alert("Nama acara dan tanggal tidak boleh kosong!");
+    if (!name || !dateStart || !dateEnd) { // Diperbarui
+        alert("Semua kolom tidak boleh kosong!");
+        return;
+    }
+    
+    // Validasi: Waktu berakhir harus setelah waktu mulai
+    if (new Date(dateEnd) <= new Date(dateStart)) { 
+        alert("Waktu berakhir harus setelah waktu mulai!");
         return;
     }
 
     const newSchedule = {
-        id: new Date().getTime(), // ID unik
+        id: new Date().getTime(),
         name: name,
-        date: date
+        date: dateStart,  // 'date' kita gunakan sebagai 'dateStart'
+        dateEnd: dateEnd  // BARU
     };
 
     schedules.push(newSchedule);
     saveSchedules(schedules);
     scheduleForm.reset();
-    displayAllCountdowns(); // Tampilkan ulang
+    renderAllSchedules(); // Gambar ulang
 }
 
 /**
  * (DELETE) Menghapus jadwal berdasarkan ID
  */
 function deleteSchedule(id) {
-    // Konfirmasi sebelum menghapus
     if (!confirm("Apakah Anda yakin ingin menghapus jadwal ini?")) {
         return;
     }
-    
     schedules = schedules.filter(schedule => schedule.id !== id);
     saveSchedules(schedules);
-    displayAllCountdowns(); // Tampilkan ulang
+    renderAllSchedules(); // Gambar ulang
 }
 
 /**
@@ -68,27 +71,28 @@ function deleteSchedule(id) {
  */
 function saveEdit(id) {
     const newName = document.getElementById(`edit-name-${id}`).value;
-    const newDate = document.getElementById(`edit-date-${id}`).value;
+    const newDateStart = document.getElementById(`edit-date-start-${id}`).value; // Diperbarui
+    const newDateEnd = document.getElementById(`edit-date-end-${id}`).value;   // BARU
 
-    if (!newName || !newDate) {
-        alert("Nama acara dan tanggal tidak boleh kosong!");
+    if (!newName || !newDateStart || !newDateEnd) { // Diperbarui
+        alert("Semua kolom tidak boleh kosong!");
         return;
     }
 
-    // Cari index jadwal yang akan diupdate
+    if (new Date(newDateEnd) <= new Date(newDateStart)) { // Validasi
+        alert("Waktu berakhir harus setelah waktu mulai!");
+        return;
+    }
+
     const scheduleIndex = schedules.findIndex(s => s.id === id);
-    
+
     if (scheduleIndex > -1) {
-        // Update data di array
         schedules[scheduleIndex].name = newName;
-        schedules[scheduleIndex].date = newDate;
-        
-        // Simpan ke localStorage
+        schedules[scheduleIndex].date = newDateStart; // Diperbarui
+        schedules[scheduleIndex].dateEnd = newDateEnd;   // BARU
         saveSchedules(schedules);
     }
-    
-    // Tampilkan ulang semua jadwal (ini akan otomatis keluar dari mode edit)
-    displayAllCountdowns();
+    renderAllSchedules(); // Gambar ulang
 }
 
 /**
@@ -99,15 +103,27 @@ function toggleEditView(id) {
     scheduleItem.classList.toggle('is-editing');
 }
 
-
-// --- Fungsi Utama untuk Tampilan (Read) ---
+// --- Fungsi Tampilan (Rendering) ---
 
 /**
- * (READ) Fungsi utama untuk menampilkan semua countdown
- * Ini akan berjalan setiap detik untuk mengupdate timer
+ * (HELPER) Fungsi untuk memformat tanggal target
  */
-function displayAllCountdowns() {
-    const now = new Date().getTime();
+function formatTargetDate(dateString) {
+    // Pengaman jika data end-date dari data lama (sebelum update) tidak ada
+    if (!dateString) return "Tanggal tidak valid"; 
+    
+    const date = new Date(dateString);
+    const options = {
+        weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
+        hour: '2-digit', minute: '2-digit',
+    };
+    return date.toLocaleDateString('id-ID', options); // Format Indonesia
+}
+
+/**
+ * (READ) Menggambar kerangka HTML untuk SEMUA jadwal
+ */
+function renderAllSchedules() {
     countdownContainer.innerHTML = ''; // Kosongkan kontainer
 
     if (schedules.length === 0) {
@@ -115,53 +131,48 @@ function displayAllCountdowns() {
         return;
     }
 
-    // Urutkan jadwal (paling dekat di atas)
     schedules.sort((a, b) => new Date(a.date) - new Date(b.date));
 
     schedules.forEach(schedule => {
-        const eventDate = new Date(schedule.date).getTime();
-        const difference = eventDate - now;
-
-        // Buat elemen HTML
         const scheduleElement = document.createElement('div');
         scheduleElement.classList.add('schedule-item');
-        scheduleElement.id = `schedule-item-${schedule.id}`; // Beri ID unik
+        scheduleElement.id = `schedule-item-${schedule.id}`;
 
-        let timerHtml;
+        // Format tanggal mulai dan berakhir
+        const targetDateStartFormatted = formatTargetDate(schedule.date);
+        const targetDateEndFormatted = formatTargetDate(schedule.dateEnd); // BARU
 
-        // Perhitungan waktu
-        if (difference > 0) {
-            const days = Math.floor(difference / (1000 * 60 * 60 * 24));
-            const hours = Math.floor((difference % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-            const minutes = Math.floor((difference % (1000 * 60 * 60)) / (1000 * 60));
-            const seconds = Math.floor((difference % (1000 * 60)) / 1000);
-
-            timerHtml = `
-                <div class="timer">
-                    <div class="time-box"><span>${days}</span><span class="label">Hari</span></div>
-                    <div class="time-box"><span>${formatTime(hours)}</span><span class="label">Jam</span></div>
-                    <div class="time-box"><span>${formatTime(minutes)}</span><span class="label">Menit</span></div>
-                    <div class="time-box"><span>${formatTime(seconds)}</span><span class="label">Detik</span></div>
-                </div>
-            `;
-        } else {
-            timerHtml = `<div class="event-ended">Jadwal Telah Selesai!</div>`;
+        // Pastikan 'dateEnd' ada, untuk kompatibilitas data lama
+        if (!schedule.dateEnd) {
+             schedule.dateEnd = schedule.date; 
         }
-        
-        // Buat 2 TAMPILAN: Display (normal) dan Edit (form)
-        // Kita akan menukar keduanya menggunakan CSS
-        
+
         scheduleElement.innerHTML = `
             <div class="display-view">
                 <button class="delete-btn" onclick="deleteSchedule(${schedule.id})">X</button>
                 <button class="edit-btn" onclick="toggleEditView(${schedule.id})">✏️</button>
+                
                 <h3>${schedule.name}</h3>
-                ${timerHtml}
+                
+                <p class="target-date-start"><b>Mulai:</b> ${targetDateStartFormatted}</p>
+                <p class="target-date-end"><b>Berakhir:</b> ${targetDateEndFormatted}</p>
+                
+                <p class="timer-label" id="timer-label-${schedule.id}"></p> 
+                
+                <div class="timer" id="timer-${schedule.id}">
+                    </div>
             </div>
-            
+
             <div class="edit-view">
+                <label>Nama Acara:</label>
                 <input type="text" id="edit-name-${schedule.id}" value="${schedule.name}">
-                <input type="datetime-local" id="edit-date-${schedule.id}" value="${schedule.date}">
+                
+                <label>Tanggal & Waktu Mulai:</label>
+                <input type="datetime-local" id="edit-date-start-${schedule.id}" value="${schedule.date}">
+                
+                <label>Tanggal & Waktu Berakhir:</label>
+                <input type="datetime-local" id="edit-date-end-${schedule.id}" value="${schedule.dateEnd}">
+                
                 <div>
                     <button class="save-btn" onclick="saveEdit(${schedule.id})">Simpan Perubahan</button>
                     <button class="cancel-btn" onclick="toggleEditView(${schedule.id})">Batal</button>
@@ -171,21 +182,73 @@ function displayAllCountdowns() {
 
         countdownContainer.appendChild(scheduleElement);
     });
+
+    updateLiveTimers(); // Update timer setelah render
 }
 
-// Fungsi helper untuk format waktu
+/**
+ * (LIVE) Hanya mengupdate teks timer setiap detik
+ */
+function updateLiveTimers() {
+    const now = new Date().getTime();
+
+    schedules.forEach(schedule => {
+        const timerLabel = document.getElementById(`timer-label-${schedule.id}`);
+        const timerDisplay = document.getElementById(`timer-${schedule.id}`);
+        
+        if (!timerDisplay || !timerLabel) return; // Lewati jika tidak di display-view
+
+        const eventStartDate = new Date(schedule.date).getTime();
+        const eventEndDate = new Date(schedule.dateEnd).getTime();
+        
+        let difference = 0;
+        let label = "";
+        let showTimer = true;
+
+        if (now < eventStartDate) {
+            // (1) Belum dimulai: Hitung mundur ke MULAI
+            difference = eventStartDate - now;
+            label = "DIMULAI DALAM:";
+        } else if (now >= eventStartDate && now < eventEndDate) {
+            // (2) Sedang berlangsung: Hitung mundur ke BERAKHIR
+            difference = eventEndDate - now;
+            label = "BERAKHIR DALAM:";
+        } else {
+            // (3) Sudah Selesai
+            label = ""; // Kosongkan label
+            showTimer = false;
+        }
+
+        // Update Label
+        timerLabel.innerHTML = label;
+
+        // Update Tampilan Timer
+        if (showTimer) {
+            const days = Math.floor(difference / (1000 * 60 * 60 * 24));
+            const hours = Math.floor((difference % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+            const minutes = Math.floor((difference % (1000 * 60 * 60)) / (1000 * 60));
+            const seconds = Math.floor((difference % (1000 * 60)) / 1000);
+
+            timerDisplay.innerHTML = `
+                <div class="time-box"><span>${days}</span><span class="label">Hari</span></div>
+                <div class="time-box"><span>${formatTime(hours)}</span><span class="label">Jam</span></div>
+                <div class="time-box"><span>${formatTime(minutes)}</span><span class="label">Menit</span></div>
+                <div class="time-box"><span>${formatTime(seconds)}</span><span class="label">Detik</span></div>
+            `;
+        } else {
+            // Acara sudah selesai
+            timerDisplay.innerHTML = `<div class="event-ended">Jadwal Telah Selesai!</div>`;
+        }
+    });
+}
+
+// Fungsi helper format waktu
 function formatTime(time) {
     return time < 10 ? `0${time}` : time;
 }
 
-
 // --- Event Listeners dan Inisialisasi ---
 
-// 1. Pasang listener di form (untuk Tambah)
 scheduleForm.addEventListener('submit', addSchedule);
-
-// 2. Tampilkan countdown saat halaman dimuat
-displayAllCountdowns();
-
-// 3. Set interval untuk mengupdate countdown setiap 1 detik
-setInterval(displayAllCountdowns, 1000);
+renderAllSchedules(); // Gambar semua jadwal saat load
+setInterval(updateLiveTimers, 1000); // Update timer setiap detik
