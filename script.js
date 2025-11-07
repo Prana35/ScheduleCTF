@@ -1,5 +1,17 @@
-// --- 1. INISIALISASI FIREBASE ---
-// GANTI BAGIAN INI DENGAN KODE firebaseConfig DARI PROYEK ANDA
+// --- 1. IMPOR FUNGSI FIREBASE (v9 Modular) ---
+// Kita mengimpor fungsi yang kita butuhkan langsung dari URL CDN Firebase
+import { initializeApp } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-app.js";
+import { 
+    getFirestore, collection, addDoc, getDocs, 
+    query, orderBy, doc, updateDoc, deleteDoc 
+} from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
+
+
+// --- 2. INISIALISASI FIREBASE ---
+// 
+// GANTI BAGIAN INI DENGAN 'firebaseConfig' BARU ANDA
+// (Yang Anda buat setelah menghapus kunci yang bocor)
+//
 const firebaseConfig = {
     apiKey: "AIzaSyCnKA7R76gZKqfh_33Xs9RCa9twxuWrJS8",
     authDomain: "schedule-20208.firebaseapp.com",
@@ -10,14 +22,12 @@ const firebaseConfig = {
 };
 
 // Inisialisasi Firebase
-const app = firebase.initializeApp(firebaseConfig);
-// Hubungkan ke layanan Firestore
-const db = firebase.firestore();
-// Tentukan nama "koleksi" (seperti tabel) di database Anda
-const schedulesCol = db.collection("schedules");
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app); // Dapatkan layanan Firestore
+const schedulesCol = collection(db, "schedules"); // Dapatkan referensi ke koleksi
 
 
-// --- 2. Inisialisasi Elemen DOM ---
+// --- 3. Inisialisasi Elemen DOM ---
 const scheduleForm = document.getElementById('add-schedule-form');
 const eventNameInput = document.getElementById('event-name');
 const eventDateStartInput = document.getElementById('event-date-start');
@@ -25,7 +35,7 @@ const eventDateEndInput = document.getElementById('event-date-end');
 const countdownContainer = document.getElementById('countdown-container');
 
 
-// --- 3. Fungsi CRUD (Create, Read, Update, Delete) ---
+// --- 4. Fungsi CRUD (Create, Read, Update, Delete) ---
 
 /**
  * (CREATE) Menambahkan jadwal baru ke Firebase
@@ -46,8 +56,8 @@ async function addSchedule(e) {
     }
 
     try {
-        // Tambahkan dokumen baru ke koleksi 'schedules'
-        await schedulesCol.add({
+        // addDoc adalah fungsi v9 (menggantikan .add())
+        await addDoc(schedulesCol, {
             name: name,
             dateStart: dateStart,
             dateEnd: dateEnd
@@ -67,8 +77,10 @@ async function renderAllSchedules() {
     countdownContainer.innerHTML = '<p style="text-align: center; color: #555;">Memuat jadwal...</p>';
     
     try {
-        // Ambil data dari Firebase, urutkan berdasarkan 'dateStart'
-        const querySnapshot = await schedulesCol.orderBy("dateStart", "asc").get();
+        // Buat query (v9) untuk mengambil dan mengurutkan data
+        const q = query(schedulesCol, orderBy("dateStart", "asc"));
+        // getDocs adalah fungsi v9 (menggantikan .get())
+        const querySnapshot = await getDocs(q);
         
         countdownContainer.innerHTML = ''; // Kosongkan
         
@@ -77,16 +89,13 @@ async function renderAllSchedules() {
             return;
         }
 
-        querySnapshot.forEach(doc => {
-            const schedule = doc.data(); // Data (nama, dateStart, dateEnd)
-            const scheduleId = doc.id; // ID unik (misal: "aB3x...")
+        querySnapshot.forEach(docSnapshot => {
+            const schedule = docSnapshot.data(); // Data (nama, dateStart, dateEnd)
+            const scheduleId = docSnapshot.id; // ID unik (misal: "aB3x...")
             
-            // Buat elemen HTML
             const scheduleElement = document.createElement('div');
             scheduleElement.classList.add('schedule-item');
             scheduleElement.id = `schedule-item-${scheduleId}`;
-            
-            // Simpan tanggal di 'data-' attribute untuk live update
             scheduleElement.dataset.dateStart = schedule.dateStart;
             scheduleElement.dataset.dateEnd = schedule.dateEnd;
 
@@ -95,18 +104,14 @@ async function renderAllSchedules() {
 
             scheduleElement.innerHTML = `
                 <div class="display-view">
-                    <button class="delete-btn" onclick="deleteSchedule('${scheduleId}')">X</button>
-                    <button class="edit-btn" onclick="toggleEditView('${scheduleId}')">✏️</button>
-                    
+                    <button class="delete-btn" data-id="${scheduleId}">X</button>
+                    <button class="edit-btn" data-id="${scheduleId}">✏️</button>
                     <h3>${schedule.name}</h3>
-                    
                     <p class="target-date-start"><b>Mulai:</b> ${targetDateStartFormatted}</p>
                     <p class="target-date-end"><b>Berakhir:</b> ${targetDateEndFormatted}</p>
-                    
                     <p class="timer-label" id="timer-label-${scheduleId}"></p> 
                     <div class="timer" id="timer-${scheduleId}"></div>
                 </div>
-
                 <div class="edit-view">
                     <label>Nama Acara:</label>
                     <input type="text" id="edit-name-${scheduleId}" value="${schedule.name}">
@@ -115,8 +120,8 @@ async function renderAllSchedules() {
                     <label>Waktu Berakhir:</label>
                     <input type="datetime-local" id="edit-date-end-${scheduleId}" value="${schedule.dateEnd}">
                     <div>
-                        <button class="save-btn" onclick="saveEdit('${scheduleId}')">Simpan</button>
-                        <button class="cancel-btn" onclick="toggleEditView('${scheduleId}')">Batal</button>
+                        <button class="save-btn" data-id="${scheduleId}">Simpan</button>
+                        <button class="cancel-btn" data-id="${scheduleId}">Batal</button>
                     </div>
                 </div>
             `;
@@ -149,10 +154,10 @@ async function saveEdit(id) {
     }
 
     try {
-        // Ambil referensi dokumen berdasarkan ID-nya
-        const docRef = schedulesCol.doc(id);
-        // Update dokumen
-        await docRef.update({
+        // doc adalah fungsi v9 (menggantikan .doc())
+        const docRef = doc(db, "schedules", id); 
+        // updateDoc adalah fungsi v9 (menggantikan .update())
+        await updateDoc(docRef, {
             name: newName,
             dateStart: newDateStart,
             dateEnd: newDateEnd
@@ -172,7 +177,9 @@ async function deleteSchedule(id) {
         return;
     }
     try {
-        await schedulesCol.doc(id).delete();
+        // deleteDoc adalah fungsi v9 (menggantikan .delete())
+        const docRef = doc(db, "schedules", id);
+        await deleteDoc(docRef);
         renderAllSchedules(); // Muat ulang
     } catch (error) {
         console.error("Error removing document: ", error);
@@ -180,27 +187,18 @@ async function deleteSchedule(id) {
     }
 }
 
-// --- 4. Fungsi Live Update Timer ---
-
-/**
- * (LIVE) Hanya mengupdate teks timer setiap detik
- * Fungsi ini membaca 'data-' atribut dari HTML, TIDAK perlu ke database
- */
+// --- 5. Fungsi Live Update Timer ---
 function updateLiveTimers() {
     const now = new Date().getTime();
-    
-    // Ambil semua item jadwal yang sedang tampil
     document.querySelectorAll('.schedule-item').forEach(item => {
-        // Cek apakah sedang dalam mode edit, jika ya, lewati
         if (item.classList.contains('is-editing')) return;
         
         const scheduleId = item.id.replace('schedule-item-', '');
         const timerLabel = document.getElementById(`timer-label-${scheduleId}`);
         const timerDisplay = document.getElementById(`timer-${scheduleId}`);
         
-        if (!timerLabel || !timerDisplay) return; // Lewati jika elemen tidak ada
+        if (!timerLabel || !timerDisplay) return;
         
-        // Ambil tanggal dari data-* atribut
         const eventStartDate = new Date(item.dataset.dateStart).getTime();
         const eventEndDate = new Date(item.dataset.dateEnd).getTime();
 
@@ -238,9 +236,7 @@ function updateLiveTimers() {
     });
 }
 
-// --- 5. Fungsi Helper & Event Listeners ---
-
-// Fungsi helper (tidak perlu async)
+// --- 6. Fungsi Helper & Event Listeners ---
 function toggleEditView(id) {
     const scheduleItem = document.getElementById(`schedule-item-${id}`);
     scheduleItem.classList.toggle('is-editing');
@@ -253,18 +249,34 @@ function formatTargetDate(dateString) {
         weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
         hour: '2-digit', minute: '2-digit',
     };
-    return date.toLocaleDateString('id-ID', options);
+    return date.toLocaleString('id-ID', options);
 }
 
 function formatTime(time) {
     return time < 10 ? `0${time}` : time;
 }
 
-// Pasang Event Listeners global
-// (Kita tidak bisa memanggil fungsi async langsung di HTML, jadi kita pasang listener di sini)
-window.deleteSchedule = deleteSchedule;
-window.toggleEditView = toggleEditView;
-window.saveEdit = saveEdit;
+// --- Event Listener Global ---
+// Ini adalah cara modern (v9) untuk menangani klik, menggantikan 'onclick'
+// Inilah yang memperbaiki error 'deleteSchedule is not defined'
+document.addEventListener('click', (e) => {
+    // Cek apakah yang diklik adalah tombol edit
+    if (e.target.classList.contains('edit-btn')) {
+        toggleEditView(e.target.dataset.id);
+    }
+    // Cek tombol batal
+    if (e.target.classList.contains('cancel-btn')) {
+        toggleEditView(e.target.dataset.id);
+    }
+    // Cek tombol simpan
+    if (e.target.classList.contains('save-btn')) {
+        saveEdit(e.target.dataset.id);
+    }
+    // Cek tombol hapus
+    if (e.target.classList.contains('delete-btn')) {
+        deleteSchedule(e.target.dataset.id);
+    }
+});
 
 // Jalankan saat halaman dimuat
 scheduleForm.addEventListener('submit', addSchedule);
