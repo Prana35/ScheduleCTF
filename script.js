@@ -5,106 +5,132 @@ const eventNameInput = document.getElementById('event-name');
 const eventDateInput = document.getElementById('event-date');
 const countdownContainer = document.getElementById('countdown-container');
 
-// Memuat jadwal dari localStorage atau menggunakan array kosong jika tidak ada
+// Memuat jadwal dari localStorage (yang disimpan sebagai JSON string)
 let schedules = loadSchedules();
 
-// --- Fungsi-Fungsi Utama ---
+// --- Fungsi Penyimpanan (Load/Save) ---
 
-/**
- * Memuat jadwal dari localStorage
- */
 function loadSchedules() {
     const schedulesJSON = localStorage.getItem('mySchedules');
-    // Jika ada data, parse JSON-nya. Jika tidak, kembalikan array kosong.
+    // Parse JSON string kembali menjadi array/object
     return schedulesJSON ? JSON.parse(schedulesJSON) : [];
 }
 
-/**
- * Menyimpan array 'schedules' saat ini ke localStorage
- * @param {Array} schedulesToSave - Array jadwal yang ingin disimpan
- */
 function saveSchedules(schedulesToSave) {
+    // Ubah array/object menjadi JSON string untuk disimpan
     localStorage.setItem('mySchedules', JSON.stringify(schedulesToSave));
 }
 
+
+// --- Fungsi CRUD (Create, Read, Update, Delete) ---
+
 /**
- * Menambahkan jadwal baru
- * @param {Event} e - Event object dari form submission
+ * (CREATE) Menambahkan jadwal baru
  */
 function addSchedule(e) {
-    e.preventDefault(); // Mencegah halaman refresh saat form disubmit
-
+    e.preventDefault(); 
     const name = eventNameInput.value;
     const date = eventDateInput.value;
 
-    // Validasi sederhana
     if (!name || !date) {
         alert("Nama acara dan tanggal tidak boleh kosong!");
         return;
     }
 
     const newSchedule = {
-        id: new Date().getTime(), // ID unik berdasarkan timestamp
+        id: new Date().getTime(), // ID unik
         name: name,
         date: date
     };
 
-    // Tambahkan jadwal baru ke array
     schedules.push(newSchedule);
-
-    // Simpan array yang sudah diupdate ke localStorage
     saveSchedules(schedules);
-
-    // Reset form
     scheduleForm.reset();
-
-    // Tampilkan ulang semua countdown
-    displayAllCountdowns();
+    displayAllCountdowns(); // Tampilkan ulang
 }
 
 /**
- * Menghapus jadwal berdasarkan ID-nya
- * @param {number} id - ID unik dari jadwal yang akan dihapus
+ * (DELETE) Menghapus jadwal berdasarkan ID
  */
 function deleteSchedule(id) {
-    // Filter array, sisakan hanya jadwal yang ID-nya TIDAK SAMA dengan id yang mau dihapus
+    // Konfirmasi sebelum menghapus
+    if (!confirm("Apakah Anda yakin ingin menghapus jadwal ini?")) {
+        return;
+    }
+    
     schedules = schedules.filter(schedule => schedule.id !== id);
-
-    // Simpan array baru ke localStorage
     saveSchedules(schedules);
+    displayAllCountdowns(); // Tampilkan ulang
+}
 
-    // Tampilkan ulang semua countdown
+/**
+ * (UPDATE) Menyimpan perubahan setelah edit
+ */
+function saveEdit(id) {
+    const newName = document.getElementById(`edit-name-${id}`).value;
+    const newDate = document.getElementById(`edit-date-${id}`).value;
+
+    if (!newName || !newDate) {
+        alert("Nama acara dan tanggal tidak boleh kosong!");
+        return;
+    }
+
+    // Cari index jadwal yang akan diupdate
+    const scheduleIndex = schedules.findIndex(s => s.id === id);
+    
+    if (scheduleIndex > -1) {
+        // Update data di array
+        schedules[scheduleIndex].name = newName;
+        schedules[scheduleIndex].date = newDate;
+        
+        // Simpan ke localStorage
+        saveSchedules(schedules);
+    }
+    
+    // Tampilkan ulang semua jadwal (ini akan otomatis keluar dari mode edit)
     displayAllCountdowns();
 }
 
 /**
- * Fungsi utama untuk menampilkan semua countdown
+ * (HELPER) Menukar antara mode tampilan dan mode edit
+ */
+function toggleEditView(id) {
+    const scheduleItem = document.getElementById(`schedule-item-${id}`);
+    scheduleItem.classList.toggle('is-editing');
+}
+
+
+// --- Fungsi Utama untuk Tampilan (Read) ---
+
+/**
+ * (READ) Fungsi utama untuk menampilkan semua countdown
  * Ini akan berjalan setiap detik untuk mengupdate timer
  */
 function displayAllCountdowns() {
     const now = new Date().getTime();
-    countdownContainer.innerHTML = ''; // Kosongkan kontainer sebelum mengisi ulang
+    countdownContainer.innerHTML = ''; // Kosongkan kontainer
 
     if (schedules.length === 0) {
         countdownContainer.innerHTML = '<p style="text-align: center; color: #555;">Belum ada jadwal. Silakan tambahkan di atas!</p>';
         return;
     }
 
-    // Urutkan jadwal berdasarkan tanggal (yang paling dekat tampil di atas)
+    // Urutkan jadwal (paling dekat di atas)
     schedules.sort((a, b) => new Date(a.date) - new Date(b.date));
 
     schedules.forEach(schedule => {
         const eventDate = new Date(schedule.date).getTime();
         const difference = eventDate - now;
 
-        // Buat elemen HTML untuk setiap jadwal
+        // Buat elemen HTML
         const scheduleElement = document.createElement('div');
         scheduleElement.classList.add('schedule-item');
+        scheduleElement.id = `schedule-item-${schedule.id}`; // Beri ID unik
 
         let timerHtml;
 
+        // Perhitungan waktu
         if (difference > 0) {
-            // Perhitungan waktu
             const days = Math.floor(difference / (1000 * 60 * 60 * 24));
             const hours = Math.floor((difference % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
             const minutes = Math.floor((difference % (1000 * 60 * 60)) / (1000 * 60));
@@ -112,42 +138,42 @@ function displayAllCountdowns() {
 
             timerHtml = `
                 <div class="timer">
-                    <div class="time-box">
-                        <span>${days}</span>
-                        <span class="label">Hari</span>
-                    </div>
-                    <div class="time-box">
-                        <span>${formatTime(hours)}</span>
-                        <span class="label">Jam</span>
-                    </div>
-                    <div class="time-box">
-                        <span>${formatTime(minutes)}</span>
-                        <span class="label">Menit</span>
-                    </div>
-                    <div class="time-box">
-                        <span>${formatTime(seconds)}</span>
-                        <span class="label">Detik</span>
-                    </div>
+                    <div class="time-box"><span>${days}</span><span class="label">Hari</span></div>
+                    <div class="time-box"><span>${formatTime(hours)}</span><span class="label">Jam</span></div>
+                    <div class="time-box"><span>${formatTime(minutes)}</span><span class="label">Menit</span></div>
+                    <div class="time-box"><span>${formatTime(seconds)}</span><span class="label">Detik</span></div>
                 </div>
             `;
         } else {
-            // Jika waktu sudah lewat
             timerHtml = `<div class="event-ended">Jadwal Telah Selesai!</div>`;
         }
-
-        // Gabungkan semua HTML
+        
+        // Buat 2 TAMPILAN: Display (normal) dan Edit (form)
+        // Kita akan menukar keduanya menggunakan CSS
+        
         scheduleElement.innerHTML = `
-            <button class="delete-btn" onclick="deleteSchedule(${schedule.id})">X</button>
-            <h3>${schedule.name}</h3>
-            ${timerHtml}
+            <div class="display-view">
+                <button class="delete-btn" onclick="deleteSchedule(${schedule.id})">X</button>
+                <button class="edit-btn" onclick="toggleEditView(${schedule.id})">✏️</button>
+                <h3>${schedule.name}</h3>
+                ${timerHtml}
+            </div>
+            
+            <div class="edit-view">
+                <input type="text" id="edit-name-${schedule.id}" value="${schedule.name}">
+                <input type="datetime-local" id="edit-date-${schedule.id}" value="${schedule.date}">
+                <div>
+                    <button class="save-btn" onclick="saveEdit(${schedule.id})">Simpan Perubahan</button>
+                    <button class="cancel-btn" onclick="toggleEditView(${schedule.id})">Batal</button>
+                </div>
+            </div>
         `;
 
-        // Tambahkan elemen jadwal ini ke kontainer
         countdownContainer.appendChild(scheduleElement);
     });
 }
 
-// Fungsi untuk menambahkan '0' di depan angka (helper)
+// Fungsi helper untuk format waktu
 function formatTime(time) {
     return time < 10 ? `0${time}` : time;
 }
@@ -155,10 +181,10 @@ function formatTime(time) {
 
 // --- Event Listeners dan Inisialisasi ---
 
-// 1. Pasang listener di form
+// 1. Pasang listener di form (untuk Tambah)
 scheduleForm.addEventListener('submit', addSchedule);
 
-// 2. Tampilkan countdown saat halaman pertama kali dimuat
+// 2. Tampilkan countdown saat halaman dimuat
 displayAllCountdowns();
 
 // 3. Set interval untuk mengupdate countdown setiap 1 detik
